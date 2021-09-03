@@ -15,7 +15,7 @@ import re
 import os
 
 # option to include metadata for each clipping
-show_info = False
+show_info = True
 
 DEFAULT_FILENAME = "My Clippings.txt"
 
@@ -37,98 +37,105 @@ CLIPPING_TEXT = 3
 MOD = 5
 
 if len(argv) >= 3:
-  script, arg1, arg2 = argv
-  if arg1 == "-i":
-    show_info = True
-    filename = arg2
-  elif arg2 == "-i":
-    show_info = True
-    filename = arg1
-  else:
-    filename = arg1
+    script, arg1, arg2 = argv
+    if arg1 == "-i":
+        show_info = True
+        filename = arg2
+    elif arg2 == "-i":
+        show_info = True
+        filename = arg1
+    else:
+        filename = arg1
 elif len(argv) == 2:
-  script, arg1 = argv
-  if arg1 == "-i":
-    show_info = True
-    filename = DEFAULT_FILENAME
-  else:
-    filename = arg1
+    script, arg1 = argv
+    if arg1 == "-i":
+        show_info = True
+        filename = DEFAULT_FILENAME
+    else:
+        filename = arg1
 else:
-  filename = DEFAULT_FILENAME
+    filename = DEFAULT_FILENAME
 
 # check that file exists, otherwise exit
 if not os.path.isfile(filename):
-  print "ERROR: cannot find \"" + filename + "\"."
-  print "Please make sure it is in the same folder as this script."
-  print "If you've renamed it, enter the new file name like this:"
-  print "\tpython pyrewood.py new_file_name.txt"
-  sys.exit()
+    print("ERROR: cannot find \"" + filename + "\".")
+    print("Please make sure it is in the same folder as this script.")
+    print("If you've renamed it, enter the new file name like this:")
+    print("\tpython pyrewood.py new_file_name.txt")
+    sys.exit()
+
 
 def remove_chars(s):
-  # replace colons with a hyphen so "A: B" becomes "A - B"
-  s = re.sub(' *: *', ' - ', s)  
-  s = s.replace('?','')
-  s = s.replace('&','and')
-  # replace ( ) with a hyphen so "this (text)" becomes "this - text"
-  s = re.sub('\((.+?)\)', r'- \1', s)  
-  # delete filename chars tht are not alphanumeric or ; , _ -
-  s = re.sub('[^a-zA-Z\d\s;,_-]+', '', s)  
-  # trim off anything that isn't a word at the start & end
-  s = re.sub('^\W+|\W+$', '', s)  
-  return s
+    # replace colons with a hyphen so "A: B" becomes "A - B"
+    s = re.sub(' *: *', ' - ', s)
+    s = s.replace('?', '')
+    s = s.replace('&', 'and')
+    # replace ( ) with a hyphen so "this (text)" becomes "this - text"
+    s = re.sub('\((.+?)\)', r'- \1', s)
+    # delete filename chars tht are not alphanumeric or ; , _ -
+    s = re.sub('[^a-zA-Z\d\s;,_-]+', '', s)
+    # trim off anything that isn't a word at the start & end
+    s = re.sub('^\W+|\W+$', '', s)
+    return s
+
 
 # create the output directory
 if not os.path.exists(DIRNAME):
-  os.makedirs(DIRNAME)
+    os.makedirs(DIRNAME)
 
-output_files = set() # set of titles already processed
+output_files = set()  # set of titles already processed
 title = metadata = ''
 
 # open My Clippings.txt and read data in lines
 infile = open(filename, 'r')
 for line_num, x in enumerate(infile):
-  # trim \r\n from line
-  x = re.sub('[\r\n]','', x)
-  # trim hex bytes at start if they're there
-  if x[:3] == '\xef\xbb\xbf':
-    x = x[3:]
+    # trim \r\n from line
+    x = re.sub('[\r\n]', '', x)
+    # trim hex bytes at start if they're there
+    if x[:3] == '\xef\xbb\xbf':
+        x = x[3:]
 
-  # if we're at a title line and it doesn't match the last title
-  if line_num % MOD == TITLE_LINE:
-    title = x
-  elif line_num % MOD == CLIPPING_INFO:
-    # include metadata (location, time etc.) if desired
-    if show_info:
-      metadata = x.replace('- Your Highlight on ','').replace('Added on ','')
-    # otherwise, clear `metadata`
-    else:
-      metadata = ''
-  elif line_num % MOD == CLIPPING_TEXT:
-    # Skip trying to write if we have no body
-    if x == '':
-      continue
+    # if we're at a title line and it doesn't match the last title
+    if line_num % MOD == TITLE_LINE:
+        title = x
+    elif line_num % MOD == CLIPPING_INFO:
+        # include metadata (location, time etc.) if desired
+        if show_info:
+            metadata = x.replace('- Your Highlight on ', '').replace('Added on ', '')
+            metadata = re.sub('.*Location ', '', metadata)
+            metadata = re.sub(' .*', '', metadata)
+            # now we expect something like "999-9999"
+            metadataList = metadata.split('-')
+            # take only the starting location, convert to string and fill to 5 places
+            metadata = metadataList[0].zfill(5)
+        # otherwise, clear `metadata`
+        else:
+            metadata = ''
+    elif line_num % MOD == CLIPPING_TEXT:
+        # Skip trying to write if we have no body
+        if x == '':
+            continue
 
-    # trim filename-unfriendly chars for outfile name
-    outfile_name = remove_chars(title) + '.txt'
+        # trim filename-unfriendly chars for outfile name
+        outfile_name = remove_chars(title) + '.txt'
 
-    # we want to `append` by default, but if this is the first time we're
-    # seeing this title, we should set the mode to `write`
-    mode = 'a'
-    if outfile_name not in output_files:
-      mode = 'w'
-      output_files.add(outfile_name)
+        # we want to `append` by default, but if this is the first time we're
+        # seeing this title, we should set the mode to `write`
+        mode = 'a'
+        if outfile_name not in output_files:
+            mode = 'w'
+            output_files.add(outfile_name)
 
-    path = DIRNAME + '/' + outfile_name
-    with open(path, mode) as outfile:
-      if metadata:
-        # write out any necessary metadata
-        outfile.write("%s\n\n" % metadata)
-      # write out the current line (the clippings text)
-      outfile.write("%s\n\n...\n\n" % x)
+        path = DIRNAME + '/' + outfile_name
+        with open(path, mode) as outfile:
+            if metadata:
+                # write out any necessary metadata
+                outfile.write("%s @@@@ " % metadata)
+            # write out the current line (the clippings text)
+            outfile.write("%s\n" % x)
 
-print "\nExported titles:\n"
+print("\nExported titles:\n")
 for i in output_files:
-  print "%s" % i
+    print("%s" % i)
 
 infile.close()
-
