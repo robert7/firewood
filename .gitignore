@@ -1,0 +1,22 @@
+.DS_Store
+*~
+.*swp
+*.bak
+node_modules
+*.log
+tmp
+c
+
+venv/**
+Kindle Clippings
+My Clippings*.txt
+
+# idea
+.idea/workspace.xml
+.idea/misc.xml
+.idea/tasks.xml
+.idea/dictionaries
+.idea/sasslintPlugin.xml
+.idea/watcherTasks.xml
+.idea/checkstyle-idea.xml
+.idea/**/sonarlint*

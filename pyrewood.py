@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+
+#### RS modification
+#### 1, enabled metadata - just starting location is extracted and aligned to 5 number
+#### 2, print all on one line with location prefix - this enabled post processing in text editor (e.g. sorting of lines)
+
+
 # pyrewood.py
 #
 # Author: Seb Pearce
